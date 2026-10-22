@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -e
 cd "$(dirname "$0")"
-OLLAMA_MODEL="${OLLAMA_MODEL:-qwen2.5vl:7b}"
+OLLAMA_MODEL="${OLLAMA_MODEL:-qwen2.5vl:3b}"
 export OLLAMA_MODEL
 
 command -v ollama >/dev/null || { echo "Ollama bulunamadı: https://ollama.com/download"; exit 1; }
@@ -10,7 +10,7 @@ command -v python3 >/dev/null || { echo "Python 3 bulunamadı."; exit 1; }
 # Ollama arka planda çalışmıyorsa başlat
 curl -s http://localhost:11434/api/tags >/dev/null 2>&1 || { ollama serve >/dev/null 2>&1 & sleep 3; }
 
-echo "[1/3] Model kontrol ediliyor: $OLLAMA_MODEL (ilk seferde ~6 GB indirilir)"
+echo "[1/3] Model kontrol ediliyor: $OLLAMA_MODEL (ilk seferde ~3 GB indirilir)"
 ollama pull "$OLLAMA_MODEL"
 
 echo "[2/3] Python paketleri kuruluyor"

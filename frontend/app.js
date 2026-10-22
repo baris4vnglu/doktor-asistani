@@ -141,16 +141,8 @@ async function send(userMessage, imageUrl) {
 }
 
 $("analyzeBtn").addEventListener("click", () => {
-  const info = [
-    $("age").value && `Yaş: ${$("age").value}`,
-    $("sex").value && `Cinsiyet: ${$("sex").value}`,
-    $("imageType").value && `Görüntü tipi: ${$("imageType").value}`,
-    $("history").value.trim() && `Şikayet / Anamnez: ${$("history").value.trim()}`,
-  ].filter(Boolean);
-
   const content =
-    "Bu hastanın görüntüsünü analiz et ve bana bulguları, olası tanıları, ek tetkikleri ve tedavi önerilerini ver." +
-    (info.length ? "\n\nHasta bilgileri:\n" + info.join("\n") : "");
+    "Bu hastanın görüntüsünü analiz et ve bana bulguları, olası tanıları, ek tetkikleri ve tedavi önerilerini ver.";
 
   // Yeni analiz = yeni konuşma
   state.messages = [];
@@ -173,7 +165,6 @@ $("resetBtn").addEventListener("click", () => {
   $("fileInput").value = "";
   $("preview").hidden = true;
   $("dropText").hidden = false;
-  ["age", "sex", "imageType", "history"].forEach((id) => ($(id).value = ""));
   $("chat").innerHTML = '<div class="placeholder">Görüntü yükleyip <b>Analiz Et</b>\'e basın. Ardından takip soruları sorabilirsiniz.</div>';
   setBusy(false);
 });

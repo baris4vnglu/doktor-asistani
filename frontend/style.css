@@ -67,7 +67,6 @@ input, select, textarea {
   font: inherit;
   color: #1f2933;
 }
-.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 
 button {
   padding: 10px 14px;

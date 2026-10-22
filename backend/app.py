@@ -15,7 +15,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://localhost:11434").rstrip("/")
-OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5vl:7b")
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5vl:3b")
 STATIC_DIR = Path(__file__).resolve().parent.parent / "frontend"
 
 SYSTEM_PROMPT = """Sen deneyimli bir klinik karar destek asistanısın ve bir doktorla konuşuyorsun.
@@ -89,7 +89,8 @@ async def chat(req: ChatRequest):
         "model": req.model or OLLAMA_MODEL,
         "messages": messages,
         "stream": True,
-        "options": {"temperature": 0.2},
+        # repeat_penalty: küçük modellerin (3b) aynı cümleyi döngüye sokmasını engeller
+        "options": {"temperature": 0.2, "repeat_penalty": 1.15, "repeat_last_n": 256},
     }
 
     async def stream():

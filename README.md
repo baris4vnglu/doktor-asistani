@@ -26,7 +26,7 @@ Tarayıcı (frontend/)  ──►  FastAPI (backend/app.py)  ──►  Ollama (
 1. [Ollama](https://ollama.com/download) ve [Python 3.10+](https://www.python.org/downloads/) kurun.
 2. Bu klasörde **Windows:** `baslat.bat` dosyasına çift tıklayın · **Mac/Linux:** `./baslat.sh` çalıştırın.
 
-Script modeli indirir (ilk seferde ~6 GB), paketleri kurar ve tarayıcıda http://localhost:8000 adresini açar.
+Script modeli indirir (ilk seferde ~3 GB), paketleri kurar ve tarayıcıda http://localhost:8000 adresini açar.
 
 ## Kurulum (elle)
 
@@ -34,7 +34,7 @@ Script modeli indirir (ilk seferde ~6 GB), paketleri kurar ve tarayıcıda http:
 
 ```bash
 # https://ollama.com/download adresinden Ollama'yı kurun, sonra:
-ollama pull qwen2.5vl:7b      # ~6 GB; zayıf makinede qwen2.5vl:3b deneyin
+ollama pull qwen2.5vl:3b      # ~3 GB; güçlü makinede qwen2.5vl:7b daha iyi sonuç verir
 ollama serve                  # zaten arka planda çalışıyorsa gerekmez
 ```
 
@@ -49,21 +49,35 @@ uvicorn backend.app:app --reload --port 8000
 
 Tarayıcıda **http://localhost:8000** adresini açın.
 
+## Docker ile çalıştırma
+
+Ollama bilgisayarınızda (konteyner dışında) çalışır; Docker yalnızca web uygulamasını çalıştırır.
+
+```bash
+ollama pull qwen2.5vl:3b
+docker compose up -d --build
+```
+
+Tarayıcıda **http://localhost:8000** adresini açın. Durdurmak için: `docker compose down`.
+Farklı model için: `OLLAMA_MODEL=qwen2.5vl:7b docker compose up -d`.
+
+> Linux'ta Ollama varsayılan olarak yalnızca 127.0.0.1'i dinler; konteynerin erişebilmesi için
+> Ollama'yı `OLLAMA_HOST=0.0.0.0 ollama serve` ile başlatın.
+
 ## Kullanım
 
 1. Görüntüyü sürükleyip bırakın veya tıklayıp seçin.
-2. İsteğe bağlı olarak yaş, cinsiyet, görüntü tipi ve şikayeti girin.
-3. **Analiz Et**'e basın. Asistan şu başlıklarla yanıt verir:
+2. **Analiz Et**'e basın. Asistan şu başlıklarla yanıt verir:
    Görüntü Bulguları · Olası Ön Tanılar · Önerilen Ek Tetkikler · Olası Tedavi Yaklaşımları · Dikkat Edilmesi Gerekenler
-4. Alttaki kutudan takip soruları sorun (ör. "Hangi antibiyotik önerirsin?", "Pnömotoraks ihtimali var mı?").
-5. Yeni hasta için **Yeni Hasta**'ya basın.
+3. Alttaki kutudan takip soruları sorun (ör. "Hangi antibiyotik önerirsin?", "Pnömotoraks ihtimali var mı?").
+4. Yeni hasta için **Yeni Hasta**'ya basın.
 
 ## Ayarlar
 
 | Ortam değişkeni | Varsayılan | Açıklama |
 |---|---|---|
 | `OLLAMA_HOST` | `http://localhost:11434` | Ollama sunucusunun adresi |
-| `OLLAMA_MODEL` | `qwen2.5vl:7b` | Kullanılacak görsel model (ör. `qwen2.5vl:3b`, `llava`, `llama3.2-vision`) |
+| `OLLAMA_MODEL` | `qwen2.5vl:3b` | Kullanılacak görsel model (ör. `qwen2.5vl:7b`, `llava`, `llama3.2-vision`) |
 
 ```bash
 OLLAMA_MODEL=qwen2.5vl:3b uvicorn backend.app:app --port 8000
