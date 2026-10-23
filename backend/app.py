@@ -1,6 +1,6 @@
-"""Doktor Asistanı - Ollama (Qwen-VL) ile lokal çalışan görüntü analiz chatbotu.
+"""Doctor Assistant - local image-analysis chatbot powered by Ollama (Qwen-VL).
 
-Çalıştırma:
+Run:
     uvicorn backend.app:app --reload --port 8000
 """
 
@@ -18,36 +18,36 @@ OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://localhost:11434").rstrip("/")
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5vl:3b")
 STATIC_DIR = Path(__file__).resolve().parent.parent / "frontend"
 
-SYSTEM_PROMPT = """Sen deneyimli bir klinik karar destek asistanısın ve bir doktorla konuşuyorsun.
-Doktor sana tıbbi görüntüler (röntgen, BT, MR, dermatoloji fotoğrafı, EKG vb.) ve hasta bilgileri verir.
+SYSTEM_PROMPT = """You are an experienced clinical decision-support assistant talking to a physician.
+The physician gives you medical images (X-ray, CT, MRI, dermatology photo, ECG, etc.) and patient information.
 
-Görevin:
-1. Görüntüyü dikkatlice incele ve gördüğün bulguları tarif et.
-2. Bulgulara ve hasta bilgilerine göre olası ön tanıları olasılık sırasıyla listele (ayırıcı tanı).
-3. Tanıyı netleştirmek için önerilebilecek ek tetkikleri yaz.
-4. Literatürde ve kılavuzlarda yer alan olası tedavi yaklaşımlarını öner.
-5. Acil durum (kırmızı bayrak) bulgusu varsa en başta açıkça belirt.
+Your task:
+1. Carefully examine the image and describe the findings you observe.
+2. Based on the findings and patient information, list possible differential diagnoses in order of likelihood.
+3. Suggest additional tests that could help clarify the diagnosis.
+4. Suggest possible treatment approaches found in the literature and clinical guidelines.
+5. If there is any emergency (red-flag) finding, state it clearly at the very top.
 
-Cevabını Türkçe ve şu başlıklarla ver:
-## Görüntü Bulguları
-## Olası Ön Tanılar
-## Önerilen Ek Tetkikler
-## Olası Tedavi Yaklaşımları
-## Dikkat Edilmesi Gerekenler
+Answer in English using these headings:
+## Image Findings
+## Possible Differential Diagnoses
+## Recommended Further Tests
+## Possible Treatment Approaches
+## Points of Caution
 
-Kurallar:
-- Emin olmadığın noktaları açıkça "belirsiz" olarak işaretle, uydurma.
-- Görüntü kalitesi yetersizse veya görüntü tıbbi değilse bunu söyle.
-- Son karar her zaman doktora aittir; sen yalnızca destek sağlarsın.
-- Takip sorularında önceki konuşmayı ve görüntüyü dikkate al."""
+Rules:
+- Clearly mark anything you're unsure about as "uncertain" — never make things up.
+- If image quality is insufficient or the image isn't medical, say so.
+- The final decision always belongs to the physician; you only provide support.
+- For follow-up questions, take the prior conversation and image into account."""
 
-app = FastAPI(title="Doktor Asistanı")
+app = FastAPI(title="Doctor Assistant")
 
 
 class Message(BaseModel):
     role: str
     content: str
-    images: list[str] | None = None  # base64 (data: öneki olmadan)
+    images: list[str] | None = None  # base64 (without the data: prefix)
 
 
 class ChatRequest(BaseModel):
@@ -57,7 +57,7 @@ class ChatRequest(BaseModel):
 
 @app.get("/api/health")
 async def health():
-    """Ollama'ya erişilebiliyor mu ve model yüklü mü kontrol eder."""
+    """Check whether Ollama is reachable and the model is available."""
     try:
         async with httpx.AsyncClient(timeout=5) as client:
             r = await client.get(f"{OLLAMA_HOST}/api/tags")
@@ -76,7 +76,7 @@ async def health():
 @app.post("/api/chat")
 async def chat(req: ChatRequest):
     if not req.messages:
-        raise HTTPException(400, "Mesaj boş olamaz")
+        raise HTTPException(400, "Message cannot be empty")
 
     messages = [{"role": "system", "content": SYSTEM_PROMPT}]
     for m in req.messages:
@@ -89,8 +89,18 @@ async def chat(req: ChatRequest):
         "model": req.model or OLLAMA_MODEL,
         "messages": messages,
         "stream": True,
-        # repeat_penalty: küçük modellerin (3b) aynı cümleyi döngüye sokmasını engeller
-        "options": {"temperature": 0.2, "repeat_penalty": 1.15, "repeat_last_n": 256},
+        # keep_alive: avoid reloading the (large) vision model between requests
+        "keep_alive": "30m",
+        "options": {
+            "temperature": 0.2,
+            # repeat_penalty: stops small (3b) models from looping the same sentence
+            "repeat_penalty": 1.15,
+            "repeat_last_n": 256,
+            # num_ctx: smaller context leaves more VRAM for GPU layer offload on small GPUs
+            "num_ctx": 2048,
+            # num_predict: cap generation length so replies finish faster
+            "num_predict": 700,
+        },
     }
 
     async def stream():
@@ -99,20 +109,20 @@ async def chat(req: ChatRequest):
                 async with client.stream("POST", f"{OLLAMA_HOST}/api/chat", json=payload) as r:
                     if r.status_code != 200:
                         body = (await r.aread()).decode(errors="replace")
-                        yield f"\n\n**Hata:** Ollama {r.status_code} döndürdü: {body}"
+                        yield f"\n\n**Error:** Ollama returned {r.status_code}: {body}"
                         return
                     async for line in r.aiter_lines():
                         if not line:
                             continue
                         chunk = json.loads(line)
                         if "error" in chunk:
-                            yield f"\n\n**Hata:** {chunk['error']}"
+                            yield f"\n\n**Error:** {chunk['error']}"
                             return
                         yield chunk.get("message", {}).get("content", "")
         except httpx.HTTPError as e:
             yield (
-                f"\n\n**Hata:** Ollama'ya bağlanılamadı ({OLLAMA_HOST}). "
-                f"`ollama serve` çalışıyor mu? Detay: {e}"
+                f"\n\n**Error:** Could not connect to Ollama ({OLLAMA_HOST}). "
+                f"Is `ollama serve` running? Details: {e}"
             )
 
     return StreamingResponse(stream(), media_type="text/plain; charset=utf-8")

@@ -1,11 +1,41 @@
+# The entire system runs inside Docker:
+#   ollama      -> Ollama server running the vision model
+#   model-pull  -> downloads the model on first start, then exits
+#   app         -> web UI + FastAPI (http://localhost:8000)
 services:
+  ollama:
+    image: ollama/ollama:latest
+    volumes:
+      - ollama-data:/root/.ollama   # downloaded model is kept here
+    environment:
+      OLLAMA_KEEP_ALIVE: 30m
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+
+  model-pull:
+    image: ollama/ollama:latest
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+    entrypoint: ["ollama", "pull", "${OLLAMA_MODEL:-qwen2.5vl:3b}"]
+    depends_on:
+      ollama:
+        condition: service_healthy
+
   app:
     build: .
     ports:
       - "8000:8000"
     environment:
-      OLLAMA_HOST: http://host.docker.internal:11434
+      OLLAMA_HOST: http://ollama:11434
       OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5vl:3b}
-    extra_hosts:
-      - "host.docker.internal:host-gateway"  # Linux'ta da çalışsın diye
+    depends_on:
+      model-pull:
+        condition: service_completed_successfully
     restart: unless-stopped
+
+volumes:
+  ollama-data:

@@ -1,40 +1,40 @@
 <!doctype html>
-<html lang="tr">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Doktor Asistanı</title>
+  <title>Doctor Assistant</title>
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
   <header>
-    <h1>🩺 Doktor Asistanı</h1>
-    <span id="status" class="status">Bağlantı kontrol ediliyor…</span>
+    <h1>🩺 Doctor Assistant</h1>
+    <span id="status" class="status">Checking connection…</span>
   </header>
 
   <main>
     <section class="panel left">
-      <h2>Görüntü</h2>
+      <h2>Image</h2>
       <label id="dropzone" class="dropzone">
         <input id="fileInput" type="file" accept="image/*" hidden>
         <img id="preview" alt="" hidden>
-        <span id="dropText">Görüntüyü sürükleyin veya tıklayıp seçin<br><small>Röntgen, BT, MR, dermatoloji fotoğrafı, EKG…</small></span>
+        <span id="dropText">Drag an image here or click to select<br><small>X-ray, CT, MRI, dermatology photo, ECG…</small></span>
       </label>
 
-      <button id="analyzeBtn" class="primary" disabled>Analiz Et</button>
-      <button id="resetBtn" class="secondary">Yeni Hasta</button>
+      <button id="analyzeBtn" class="primary" disabled>Analyze</button>
+      <button id="resetBtn" class="secondary">New Patient</button>
     </section>
 
     <section class="panel right">
-      <h2>Asistan</h2>
+      <h2>Assistant</h2>
       <div id="chat" class="chat">
-        <div class="placeholder">Görüntü yükleyip <b>Analiz Et</b>'e basın. Ardından takip soruları sorabilirsiniz.</div>
+        <div class="placeholder">Upload an image and click <b>Analyze</b>. You can then ask follow-up questions.</div>
       </div>
       <form id="chatForm" class="chat-form">
-        <input id="chatInput" placeholder="Takip sorusu yazın… (örn: Hangi antibiyotik önerirsin?)" disabled>
-        <button class="primary" disabled id="sendBtn">Gönder</button>
+        <input id="chatInput" placeholder="Type a follow-up question… (e.g. Which antibiotic would you recommend?)" disabled>
+        <button class="primary" disabled id="sendBtn">Send</button>
       </form>
-      <p class="disclaimer">⚠️ Bu sistem yalnızca karar desteği sağlar. Tanı ve tedavi kararı hekime aittir.</p>
+      <p class="disclaimer">⚠️ This system only provides decision support. The diagnosis and treatment decision always belong to the physician.</p>
     </section>
   </main>
 

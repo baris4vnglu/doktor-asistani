@@ -8,8 +8,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY backend/ backend/
 COPY frontend/ frontend/
 
-# Ollama konteynerin dışında (bilgisayarınızda) çalışır
-ENV OLLAMA_HOST=http://host.docker.internal:11434 \
+# Connects to the "ollama" service defined in docker-compose.yml
+ENV OLLAMA_HOST=http://ollama:11434 \
     OLLAMA_MODEL=qwen2.5vl:3b
 
 EXPOSE 8000

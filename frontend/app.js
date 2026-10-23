@@ -1,44 +1,59 @@
 const $ = (id) => document.getElementById(id);
 
 const state = {
-  imageBase64: null,   // data: öneki olmadan
+  imageBase64: null,   // base64 without the data: prefix
   imageDataUrl: null,
-  messages: [],        // Ollama formatında konuşma geçmişi
+  messages: [],        // conversation history in Ollama format
   busy: false,
 };
 
-// ---------- Bağlantı durumu ----------
+// ---------- Connection status ----------
 async function checkHealth() {
   const el = $("status");
   try {
     const h = await (await fetch("/api/health")).json();
     if (!h.ollama) {
-      el.textContent = "Ollama çalışmıyor";
+      el.textContent = "Ollama is not running";
       el.className = "status err";
     } else if (!h.model_available) {
-      el.textContent = `Model yok: ollama pull ${h.model}`;
+      el.textContent = `Model missing: ollama pull ${h.model}`;
       el.className = "status err";
     } else {
-      el.textContent = `Bağlı · ${h.model}`;
+      el.textContent = `Connected · ${h.model}`;
       el.className = "status ok";
     }
   } catch {
-    el.textContent = "Sunucuya ulaşılamadı";
+    el.textContent = "Cannot reach the server";
     el.className = "status err";
   }
 }
 
-// ---------- Görüntü yükleme ----------
+// ---------- Image upload ----------
+// Downscale before sending: large camera/scan photos make the vision
+// model noticeably slower, and the model gains nothing past ~1024px.
+const MAX_IMAGE_DIM = 1024;
+
 function loadFile(file) {
   if (!file || !file.type.startsWith("image/")) return;
   const reader = new FileReader();
   reader.onload = () => {
-    state.imageDataUrl = reader.result;
-    state.imageBase64 = reader.result.split(",")[1];
-    $("preview").src = reader.result;
-    $("preview").hidden = false;
-    $("dropText").hidden = true;
-    $("analyzeBtn").disabled = state.busy;
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.min(1, MAX_IMAGE_DIM / Math.max(img.width, img.height));
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.round(img.width * scale);
+      canvas.height = Math.round(img.height * scale);
+      canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+      const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
+
+      state.imageDataUrl = dataUrl;
+      state.imageBase64 = dataUrl.split(",")[1];
+      $("preview").src = dataUrl;
+      $("preview").hidden = false;
+      $("dropText").hidden = true;
+      $("analyzeBtn").disabled = state.busy;
+    };
+    img.src = reader.result;
   };
   reader.readAsDataURL(file);
 }
@@ -53,7 +68,7 @@ dz.addEventListener("drop", (e) => {
   loadFile(e.dataTransfer.files[0]);
 });
 
-// ---------- Basit markdown -> HTML ----------
+// ---------- Simple markdown -> HTML ----------
 function escapeHtml(s) {
   return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 }
@@ -81,7 +96,7 @@ function renderMarkdown(text) {
   return html;
 }
 
-// ---------- Sohbet ----------
+// ---------- Chat ----------
 function addBubble(role, text, imageUrl) {
   const chat = $("chat");
   chat.querySelector(".placeholder")?.remove();
@@ -131,7 +146,7 @@ async function send(userMessage, imageUrl) {
       $("chat").scrollTop = $("chat").scrollHeight;
     }
   } catch (e) {
-    answer += `\n\n**Hata:** ${e.message}`;
+    answer += `\n\n**Error:** ${e.message}`;
     out.innerHTML = renderMarkdown(answer);
   }
   out.classList.remove("typing");
@@ -142,9 +157,9 @@ async function send(userMessage, imageUrl) {
 
 $("analyzeBtn").addEventListener("click", () => {
   const content =
-    "Bu hastanın görüntüsünü analiz et ve bana bulguları, olası tanıları, ek tetkikleri ve tedavi önerilerini ver.";
+    "Analyze this patient's image and give me the findings, possible diagnoses, additional tests, and treatment recommendations.";
 
-  // Yeni analiz = yeni konuşma
+  // New analysis = new conversation
   state.messages = [];
   $("chat").innerHTML = "";
   send({ role: "user", content, images: [state.imageBase64] }, state.imageDataUrl);
@@ -165,7 +180,7 @@ $("resetBtn").addEventListener("click", () => {
   $("fileInput").value = "";
   $("preview").hidden = true;
   $("dropText").hidden = false;
-  $("chat").innerHTML = '<div class="placeholder">Görüntü yükleyip <b>Analiz Et</b>\'e basın. Ardından takip soruları sorabilirsiniz.</div>';
+  $("chat").innerHTML = '<div class="placeholder">Upload an image and click <b>Analyze</b>. You can then ask follow-up questions.</div>';
   setBusy(false);
 });
 
